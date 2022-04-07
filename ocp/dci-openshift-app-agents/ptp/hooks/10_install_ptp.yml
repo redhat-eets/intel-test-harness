@@ -1,0 +1,142 @@
+---
+- name: Create namespace for PTP
+  k8s:
+    api_version: v1
+    kind: Namespace
+    name: openshift-ptp
+
+- name: Create operator group for PTP
+  k8s:
+    api_version: operators.coreos.com/v1
+    kind: OperatorGroup
+    name: ptp-operators
+    namespace: openshift-ptp
+    resource_definition:
+      spec:
+        targetNamespaces:
+          - openshift-ptp
+
+- name: Find subscription channel
+  tags: get_subscription_version
+  k8s_info:
+    api_version: packages.operators.coreos.com/v1
+    kind: PackageManifest
+    name: ptp-operator
+    namespace: default
+  register: ptp_manifest
+
+- name: Subscribe to PTP operator
+  k8s:
+    api_version: operators.coreos.com/v1alpha1
+    kind: Subscription
+    name: ptp-operator-subscription
+    namespace: openshift-ptp
+    resource_definition:
+      spec:
+        channel: "{{ ptp_manifest.resources[0].status.defaultChannel }}"
+        installPlanApproval: Manual
+        name: ptp-operator
+        source: redhat-operators
+        sourceNamespace: openshift-marketplace
+
+- name: Wait for PTP CRD show up
+  tags: wait_for_crd
+  k8s_info:
+    kind: CustomResourceDefinition
+    name: ptpconfigs.ptp.openshift.io
+  register: ptpconfigs_crd
+  until: ptpconfigs_crd.resources | length > 0
+  retries: 100
+  delay: 3
+
+- name: apply the PTP config
+  k8s:
+    api_version: ptp.openshift.io/v1
+    kind: PtpConfig
+    name: ptp-du
+    namespace: openshift-ptp
+    resource_definition:
+      spec:
+        nodeSelector:
+          nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/worker-cnf
+                operator: In
+                values:
+                  - ""
+        profile:
+        - name: "profile1"
+          interface: "ens3f0"
+          ptp4lOpts: "-s -2"
+          phc2sysOpts: "-a -r"
+        recommend:
+        - profile: "profile1"
+          priority: 10
+
+- name: disable chronyd
+  k8s:
+    api_version: machineconfiguration.openshift.io/v1
+    kind: MachineConfig
+    name: disable-chronyd
+    namespace: default
+    resource_definition:
+      metadata:
+        labels:
+          machineconfiguration.openshift.io/role: worker-cnf
+      spec:
+        config:
+          ignition:
+            version: 2.2.0
+          systemd:
+            units:
+              - contents: |
+                  [Unit]
+                  Description=NTP client/server
+                  Documentation=man:chronyd(8) man:chrony.conf(5)
+                  After=ntpdate.service sntp.service ntpd.service
+                  Conflicts=ntpd.service systemd-timesyncd.service
+                  ConditionCapability=CAP_SYS_TIME
+      
+                  [Service]
+                  Type=forking
+                  PIDFile=/run/chrony/chronyd.pid
+                  EnvironmentFile=-/etc/sysconfig/chronyd
+                  ExecStart=/usr/sbin/chronyd
+                  ExecStartPost=/usr/libexec/chrony-helper update-daemon
+                  PrivateTmp=yes
+                  ProtectHome=yes
+                  ProtectSystem=full
+      
+                  [Install]
+                  WantedBy=multi-user.target
+                enabled: false
+                name: "chronyd.service"
+
+- pause:
+    seconds: 60
+
+- name: Get MCP info 
+  k8s_info:
+    api_version: v1
+    kind: MachineConfigPool
+    name: worker-cnf
+    namespace: default
+  register: mcp_status
+
+#- name: dump info
+#  ansible.builtin.debug:
+#    msg:
+#    - "mcp_status: {{ mcp_status.resources[0].status }}"
+
+- name: Wait for MCP complete
+  k8s_info:
+    api_version: v1
+    kind: MachineConfigPool
+    name: worker-cnf
+    namespace: default
+  register: mcp_status
+  retries: 100
+  delay: 5
+  until:
+    - mcp_status.resources[0].status.machineCount == mcp_status.resources[0].status.readyMachineCount
+
