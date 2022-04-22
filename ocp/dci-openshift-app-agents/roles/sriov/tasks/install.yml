@@ -1,0 +1,5 @@
+---
+
+#- include_tasks: test_vf_check.yml
+#- include_tasks: 10_install_sriov.yml
+- include_tasks: 10_install_sriov_template.yml

@@ -1,0 +1,5 @@
+---
+- name: hello test
+  shell: |
+    set -x
+    python3 -m pytest --junit-xml /tmp/hello.xml "{{role_path}}"/scripts/test_ptp.py

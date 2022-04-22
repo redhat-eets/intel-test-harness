@@ -1,0 +1,21 @@
+- name: Wait for operator pod
+  k8s_info:
+    api_version: v1
+    kind: Pod
+    namespace: "{{ namespace }}" 
+    field_selectors:
+      - status.phase=Running
+  register: pod_status
+  until: pod_status.resources | length > 0
+  retries: 100
+  delay: 5
+
+- name: wait for FEC CRD
+  k8s_info:
+    kind: CustomResourceDefinition
+    name: "{{ crd_name }}" 
+  register: crd
+  until: crd.resources | length > 0
+  retries: 100
+  delay: 3
+

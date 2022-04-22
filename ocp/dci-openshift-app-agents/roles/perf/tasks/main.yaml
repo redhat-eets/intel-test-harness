@@ -1,0 +1,119 @@
+---
+- name: Label baremetal worker nodes as worker-cnf
+  k8s:
+    kind: Node
+    name: "{{ hostvars[item].hostname }}"
+    resource_definition:
+      metadata:
+        labels:
+          node-role.kubernetes.io/worker-cnf: ""
+  with_items: "{{ groups['baremetal_workers'] }}"
+  
+- set_fact:
+    package_name: "performance-addon-operator"
+
+- import_tasks: "{{ role_path }}/../lib/tasks/get-channel.yml"
+
+- name: Apply the Performance Operator Subscription config
+  k8s:
+    state: present
+    definition: "{{ lookup('template', 'sub-perf.yml') }}"
+  register: sub_version
+
+  #- meta: end_play
+
+- set_fact:
+    namespace: openshift-performance-addon
+
+- import_tasks: "{{ role_path }}/../lib/tasks/wait-csv-perf.yml"
+
+  #- name: Check if performance-addon-operator csv is installed
+  # k8s_info:
+  # api: operators.coreos.com/v1alpha1
+  # namespace: openshift-performance-addon
+  # kind: ClusterServiceVersion
+  #  register: csv
+  # retries: 50
+  #delay: 5
+  #until:
+  # - "csv.resources|length >= 1"
+  # - "'status' in csv.resources[0]"
+  # - "'phase' in csv.resources[0].status"
+  # - ("csv.resources[0].status.phase == 'Succeeded'" or "csv.resources[0].status.phase == 'Present'")
+
+
+- name: Execute all CPU command on baremetal worker over SSH
+  shell: "{{ role_path }}/../lib/scripts/exec_over_ssh.sh {{ hostvars[item].hostname }} lscpu | awk '/On-line CPU/{print $NF;}'"
+  register: all_cpus
+  with_items: "{{ groups['baremetal_workers'] }}"
+
+- name: Log all_cpus
+  debug: 
+    msg: "all_cpus: {{ all_cpus.results[0].stdout}}"
+
+- name: Execute reserved CPU command on baremetal worker over SSH
+  shell: "{{ role_path }}/../lib/scripts/exec_over_ssh.sh {{ hostvars[item].hostname }} 'cat /sys/bus/cpu/devices/cpu0/topology/thread_siblings_list'"
+  register: du_reserved_cpus
+  with_items: "{{ groups['baremetal_workers'] }}"
+
+- name: Log du_reserved_cpus
+  debug: 
+    msg: "du_reserved_cpus: {{ du_reserved_cpus.results[0].stdout }}"
+
+  #- name: Execute all CPU command on baremetal worker
+  #  community.kubernetes.k8s_exec:
+  #    namespace: "{{ hostvars[item].namespace }}"
+  #    pod: "{{ hostvars[item].hostname }}"
+  #    command: lscpu | awk '/On-line CPU/{print $NF;}'
+  #  register: all_cpus
+  #  with_items: "{{ groups['baremetal_workers'] }}"
+
+  #- name: Execute reserved CPU command on baremetal worker
+  #  community.kubernetes.k8s_exec:
+  #    namespace: "{{ hostvars[item].namespace }}"
+  #    pod: "{{ hostvars[item].hostname }}"
+  #    command: cat /sys/bus/cpu/devices/cpu0/topology/thread_siblings_list
+  #  register: du_reserved_cpus
+  #  with_items: "{{ groups['baremetal_workers'] }}"
+
+- name: Log cpu command
+  debug:
+    msg: "{{ role_path }}/tasks/cpu_cmd.py cpuset-substract {{ all_cpus.results[0].stdout }} {{ du_reserved_cpus.results[0].stdout }}"
+
+- name: Run the cpu_cmd.py to get DU Isolated CPUs
+  script: "{{ role_path }}/../lib/scripts/cpu_cmd.py cpuset-substract {{ all_cpus.results[0].stdout }} {{ du_reserved_cpus.results[0].stdout }}"
+  args:
+    executable: python3
+  environment:
+    - PYTHONPATH: "{{ role_path }}/../lib/scripts"
+  register: du_isolated_cpus
+
+- name: Log du_isolated_cpus
+  debug:
+    msg: "du_isolated_cpus: {{ du_isolated_cpus.stdout }}"
+
+- name: Create the Machine Config Pool
+  k8s:
+    state: present
+    definition: "{{ lookup('template', 'mcp-worker-cnf.yml') }}"
+
+- name: Apply the Performance Profile Config
+  k8s:
+    state: present
+    definition: "{{ lookup('template', 'performance_profile.yml') }}"
+  register: result
+
+- import_tasks: "{{ role_path }}/../lib/tasks/wait-mcp.yml"
+  when: result.changed
+
+
+#- pause:
+#    seconds: 60
+#
+#- name: Wait for MCP complete
+#  shell: oc get mcp worker-cnf -o json | jq '.status.machineCount as $count | $count == .status.readyMachineCount'
+#  register: mcp_status
+#  retries: 300
+#  delay: 10
+#  until:
+#    - ("true" in mcp_status.stdout)

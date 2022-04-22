@@ -1,0 +1,27 @@
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetwork
+metadata:
+  name: sriov-vlan10
+  namespace: openshift-sriov-network-operator
+spec:
+  ipam: ""
+  capabilities: '{ "mac": true }'
+  resourceName: intelnics0
+  vlan: 10
+  spoofChk: "off"
+  trust: "on"
+  networkNamespace: template-flexran-ns-name
+---
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetwork
+metadata:
+  name: sriov-vlan20
+  namespace: openshift-sriov-network-operator
+spec:
+  ipam: ""
+  capabilities: '{ "mac": true }'
+  resourceName: intelnics0
+  vlan: 20
+  spoofChk: "off"
+  trust: "on"
+  networkNamespace: template-flexran-ns-name

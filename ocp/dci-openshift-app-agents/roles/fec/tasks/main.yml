@@ -1,0 +1,33 @@
+- name: Label baremetal worker nodes for FEC capability 
+  k8s:
+    kind: Node
+    name: "{{ hostvars[item].hostname }}"
+    resource_definition:
+      metadata:
+        labels:
+          fpga.intel.com/intel-accelerator-present: ""
+  with_items: "{{ groups['baremetal_workers'] }}"
+
+- set_fact:
+    package_name: "sriov-fec"
+ 
+- import_tasks: "{{ role_path }}/../lib/tasks/get-channel.yml"
+
+- name: Create sriov subscription using template
+  k8s:
+    state: present
+    definition: "{{ lookup('template', 'sub-fec.yml') }}"
+
+- set_fact:
+    namespace: vran-acceleration-operators
+
+- import_tasks: "{{ role_path }}/../lib/tasks/wait-csv.yml"
+
+- name: create virtual functions on acc100
+  k8s:
+    state: present
+    definition: "{{ lookup('template', 'create-vf-acc100.yml') }}"
+  register: result
+
+- import_tasks: "{{ role_path }}/../lib/tasks/wait-mcp.yml"
+  when: result.changed

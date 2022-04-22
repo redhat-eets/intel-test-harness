@@ -1,0 +1,5 @@
+---
+- hosts: jumphost
+  tasks:  
+  - include_tasks: install.yml
+

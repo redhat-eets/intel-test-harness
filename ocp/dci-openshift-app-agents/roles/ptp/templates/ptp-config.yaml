@@ -1,0 +1,16 @@
+apiVersion: ptp.openshift.io/v1
+kind: PtpConfig
+metadata:
+  name: ptp-du
+  namespace: openshift-ptp 
+spec:
+  profile: 
+  - name: "profile1" 
+    interface: "{{du_ptp_int}}"
+    ptp4lOpts: "-s -2" 
+    phc2sysOpts: "-a -r" 
+  recommend: 
+  - profile: "profile1" 
+    priority: 10 
+    match: 
+    - nodeLabel: "node-role.kubernetes.io/worker-cnf" 

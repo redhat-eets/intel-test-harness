@@ -1,0 +1,36 @@
+- name: "Get InstallPlan details"
+  k8s_info:
+    api: operators.coreos.com/v1alpha1
+    kind: InstallPlan
+    namespace: "{{ namespace }}"
+  register: reg_ip
+  retries: 30
+  delay: 5
+  until:
+    - "reg_ip.resources|length  >= 1"
+    - "'spec' in reg_ip.resources[0]"
+    - "'clusterServiceVersionNames' in reg_ip.resources[0].spec"
+
+- name: "Set CSV name from IP"
+  set_fact:
+    csv_name: "{{ reg_ip.resources[0].spec.clusterServiceVersionNames[0] }}"
+
+- name: "Get CSVs from namespace {{ namespace }}"
+  k8s_info:
+    api: operators.coreos.com/v1alpha1
+    namespace: "{{ namespace }}" 
+    kind: ClusterServiceVersion
+    name: "{{ csv_name }}"
+  register: csv
+  retries: 30
+  delay: 5
+  #no_log: true
+  until:
+    - "csv.resources|length >= 1"
+    - "'status' in csv.resources[0]"
+    - "'phase' in csv.resources[0].status"
+    - "csv.resources[0].status.phase == 'Succeeded'"
+
+- name: "Wait for endpoints to become available"
+    pause:
+      seconds: 60

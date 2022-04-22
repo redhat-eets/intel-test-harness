@@ -1,0 +1,41 @@
+---
+- name: Label baremetal worker nodes for FEC capability
+  k8s:
+    kind: Node
+    name: "{{ hostvars[item].hostname }}"
+    resource_definition:
+      metadata:
+        labels:
+          node-role.kubernetes.io/worker-cnf: ""
+  with_items: "{{ groups['baremetal_workers'] }}"
+
+- set_fact:
+    package_name: "ptp-operator"
+
+- import_tasks: "{{ role_path }}/../lib/tasks/get-channel.yml"
+
+- name: Create sriov subscription using template
+  k8s:
+    state: present
+    definition: "{{ lookup('template', 'sub-ptp.yml') }}"
+
+- set_fact:
+    namespace: openshift-ptp
+
+- import_tasks: "{{ role_path }}/../lib/tasks/wait-csv.yml"
+
+- name: apply the PTP config
+  k8s:
+    state: present
+    definition: "{{ lookup('template', 'ptp-config.yaml') }}"
+
+- name: disable chronyd
+  k8s:
+    state: present
+    definition: "{{ lookup('template', 'disable-chronyd.yml') }}"
+  register: result
+
+- import_tasks: "{{ role_path }}/../lib/tasks/wait-mcp.yml"
+  when: result.changed 
+
+

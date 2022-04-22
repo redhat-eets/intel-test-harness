@@ -1,0 +1,22 @@
+- name: "Get CSVs from namespace {{ namespace }}"
+  k8s_info:
+    api: operators.coreos.com/v1alpha1
+    namespace: "{{ namespace }}" 
+    kind: ClusterServiceVersion
+  register: csv
+  retries: 30
+  delay: 5
+  #no_log: true
+  until:
+    - "csv.resources|length >= 1"
+    - "'status' in csv.resources[0]"
+    - "'phase' in csv.resources[0].status"
+    - ("csv.resources[0].status.phase == 'Succeeded'" or "csv.resources[0].status.phase == 'Present'")
+
+- name: "debug"
+  debug:
+    msg: "csv: {{ csv }}"
+
+- name: "Wait for endpoints to become available"
+    pause:
+      seconds: 60

@@ -1,0 +1,14 @@
+- name: Wait for VF creation
+  #shell: "{{ playbook_dir }}/exec_over_ssh.sh {{ hostvars[item].hostname }} 'ip link show {{ du_sriov_int }}' | egrep '^\s+vf\s'"
+  shell: |
+    "{{ playbook_dir }}/exec_over_ssh.sh" "{{ hostvars[item].hostname }}" "ip link show ens1f0 | egrep '^\s+vf\s'"
+  register: vf_status
+  retries: 1
+  delay: 5
+  with_items: "{{ groups['baremetal_workers'] }}"
+  until:
+    - (vf_status.stdout | length > 0)
+
+- name: print VF
+  debug:
+    msg: "{{ vf_status.stdout }}" 

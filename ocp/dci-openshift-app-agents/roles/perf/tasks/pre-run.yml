@@ -1,0 +1,4 @@
+---
+- name: Install specified python requirements
+  pip:
+    requirements: "/root/intel-test-harness/ocp/dci-openshift-app-agents/perf/hooks/requirements.txt" #"{{ dci_config_dir }}/perf/requirements.txt"

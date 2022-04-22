@@ -1,0 +1,16 @@
+- name: Find subscription channel
+  tags: get_subscription_version
+  k8s_info:
+    api_version: packages.operators.coreos.com/v1
+    kind: PackageManifest
+    name: "{{ package_name }}" 
+    namespace: default
+  register: manifest
+
+- debug:
+    msg: "{{ manifest.resources[0].status.defaultChannel }}"
+  when: debug is defined and debug|int == 1
+
+- set_fact:
+    sub_channel: "{{ manifest.resources[0].status.defaultChannel }}"
+
