@@ -1,0 +1,125 @@
+---
+- name: Create registry directory structure
+  file:
+    path: "/opt/registry"
+    state: directory
+    mode: 0755
+  become: yes
+
+- name: Create registry directory structure
+  file:
+    path: "/opt/registry/{{ item }}"
+    state: directory
+    mode: 0755
+  with_items:
+  - certs
+  - data
+  become: yes
+
+- name: Create private key file
+  openssl_privatekey:
+    path: "/opt/registry/certs/cert.key"
+  become: yes
+
+- name: Create CSR for CA
+  openssl_csr:
+    path: "/opt/registry/certs/cert.csr"
+    privatekey_path: "/opt/registry/certs/cert.key"
+    common_name: "{{ ansible_fqdn }}"
+    subject_alt_name: "IP:{{ ansible_default_ipv4.address }}"
+    basic_constraints_critical: true
+    create_subject_key_identifier: true
+    basic_constraints:
+    - "CA:TRUE"
+  become: yes
+
+- name: Create self-signed CA certificate
+  openssl_certificate:
+    path: "/opt/registry/certs/cert.ca"
+    privatekey_path: "/opt/registry/certs/cert.key"
+    csr_path: "/opt/registry/certs/cert.csr"
+    provider: selfsigned
+    mode: 0644
+  become: yes
+
+- name: Create ownca certificate
+  openssl_certificate:
+    path: "/opt/registry/certs/cert.crt"
+    ownca_privatekey_path: "/opt/registry/certs/cert.key"
+    csr_path: "/opt/registry/certs/cert.csr"
+    ownca_path: "/opt/registry/certs/cert.ca"
+    ownca_create_authority_key_identifier: true
+    provider: ownca
+    mode: 0644
+  become: yes
+
+- name: Copy certificate to PKI directory
+  copy:
+    src: "/opt/registry/certs/cert.crt"
+    dest: "/etc/pki/ca-trust/source/anchors/cert.crt"
+    remote_src: true
+    mode: 0644
+  become: yes
+
+- name: Update system CA trust store
+  shell: update-ca-trust extract
+  become: yes
+
+- name: Start registry container
+  containers.podman.podman_container:
+    name: local_registry
+    image: docker.io/library/registry:latest
+    state: stopped
+    volumes:
+      - /opt/registry/data:/var/lib/registry:z
+      - /opt/registry/certs/:/certs:z
+    env:
+      REGISTRY_HTTP_TLS_CERTIFICATE: "/certs/cert.crt"
+      REGISTRY_HTTP_TLS_KEY: "/certs/cert.key"
+    publish:
+      - "5000:5000"
+  register: local_registry_info
+  become: yes
+
+- name: Setting facts about container
+  set_fact:
+    local_registry_name: "{{ local_registry_info.container.Name }}"
+    local_registry_pidfile: "{{ local_registry_info.container.ConmonPidFile }}"
+
+- name: Copy the systemd service file
+  copy:
+    content: |
+      [Unit]
+      Description=Podman container_local_registry.service
+      [Service]
+      Restart=on-failure
+      ExecStart=/usr/bin/podman start {{ local_registry_name }}
+      ExecStop=/usr/bin/podman stop -t 10 {{ local_registry_name }}
+      KillMode=none
+      Type=forking
+      PIDFile={{ local_registry_pidfile }}
+      [Install]
+      WantedBy=default.target
+    dest: "/etc/systemd/system/container_local_registry.service"
+    mode: '0644'
+  become: yes
+
+- name: Reload systemd service
+  systemd:
+    daemon_reexec: yes
+  become: yes
+
+- name: Enable container_local_registry.service
+  systemd:
+    name: container_local_registry.service
+    enabled: yes
+  become: yes
+
+- name: Start container_local_registry.service 
+  systemd:
+    name: container_local_registry.service
+    state: restarted
+  become: yes
+
+- name: place repo cert in OCP
+  include_tasks: place_cert_in_ocp.yml

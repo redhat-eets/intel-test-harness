@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: registry-cas
+data:
+  {{ ansible_default_ipv4.address }}..5000: |
+    {{ cert_data | indent(width=4) }}
