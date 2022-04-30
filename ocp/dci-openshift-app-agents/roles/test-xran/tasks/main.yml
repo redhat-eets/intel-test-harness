@@ -1,0 +1,92 @@
+- name: install tmux
+  yum:
+    name: tmux
+    state: present
+
+- name: install linuxptp 
+  yum:
+    name: linuxptp
+    state: latest
+
+- name: replace priority setting in ptp4l.conf
+  lineinfile:
+    path: /etc/ptp4l.conf
+    regexp: '^priority1(\s+).*'
+    line: "priority1\t\t127"
+
+- name: replace OPTIONS in /etc/sysconfig/phc2sys
+  lineinfile:
+    path: /etc/sysconfig/phc2sys
+    regexp: '^OPTIONS=.*'
+    line: OPTIONS="{{'-a -r -r -m' if ru_is_gm is defined and ru_is_gm else '-a -r -m' }}"
+
+- name: replace OPTIONS in /etc/sysconfig/ptp4l
+  lineinfile:
+    path: /etc/sysconfig/ptp4l
+    regexp: '^OPTIONS=.*'
+    line: OPTIONS="-f /etc/ptp4l.conf -i {{ru_ptp_int}} -2 -m"
+
+- name: stop chronyd
+  systemd:
+    name: chronyd
+    state: stopped
+
+- name: Enable ptp4l.service
+  systemd:
+    name: ptp4l.service
+    enabled: yes
+  become: yes
+
+- name: Start ptp4l.service
+  systemd:
+    name: ptp4l.service
+    state: restarted
+  become: yes
+
+- name: Enable phc2sys.service
+  systemd:
+    name: phc2sys.service
+    enabled: yes
+  become: yes
+
+- name: Start phc2sys.service
+  systemd:
+    name: phc2sys.service
+    state: restarted
+  become: yes
+
+- name: create /opt/ru_scripts
+  file:
+    path: "/opt/ru_scripts"
+    state: directory
+    mode: 0755
+  become: yes
+
+- name: copy cpu_cmd.py
+  copy:
+    src: "{{role_path}}/../lib/scripts/"
+    dest: /opt/ru_scripts/
+  become: yes
+
+
+- name: create /opt/ru_scripts/ru_sriov.sh
+  template:
+    src: ru_sriov.sh
+    dest: /opt/ru_scripts/ru_sriov.sh
+    owner: root
+    group: root
+    mode: 0755
+  become: yes
+
+- name: execute /opt/ru_scripts/ru_sriov.sh
+  shell: /opt/ru_scripts/ru_sriov.sh
+  register: result
+
+- set_fact:
+    oru_sriov_str: "{{ result.stdout }}"
+
+- name: loop over oran test configs
+  include_tasks: oran.yml
+  loop: "{{ orancfgs }}"
+  loop_control:
+    loop_var: orancfg

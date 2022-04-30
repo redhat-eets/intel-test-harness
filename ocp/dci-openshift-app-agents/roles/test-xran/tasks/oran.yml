@@ -1,0 +1,65 @@
+---
+- name: create /opt/ru_scripts/ru_start.sh
+  template:
+    src: ru_start.sh
+    dest: /opt/ru_scripts/ru_start.sh
+    owner: root
+    group: root
+    mode: 0755
+  become: yes
+
+- name: execute /opt/ru_scripts/ru_start.sh
+  shell: /opt/ru_scripts/ru_start.sh
+  args:
+    chdir: /opt/ru_scripts
+  become: yes
+
+- name: create namespace {{flexran_du_ns}}
+  k8s:
+    definition:
+      api_version: v1
+      kind: Namespace
+      metadata:
+        name: "{{flexran_du_ns}}" 
+
+- name: delete existing FlexRAN pod
+  k8s:
+    state: absent
+    kind: Pod
+    namespace: "{{flexran_du_ns}}"
+    name: flexran-du
+    api_version: v1
+
+- name: make sure FlexRAN is gone
+  k8s_info:
+    api: v1 
+    namespace: "{{flexran_du_ns}}"
+    kind: Pod
+    name: flexran-du
+  register: flexran_pod
+  retries: 60
+  delay: 5
+  until:
+    - "flexran_pod.resources|length == 0 "
+
+- name: create FlexRAN pod
+  k8s:
+    state: present
+    definition: "{{ lookup('template', 'pod_flexran_xran.yml') }}"
+
+- name: make sure FlexRAN pod up
+  k8s_info:
+    api: v1 
+    namespace: "{{flexran_du_ns}}"
+    kind: Pod
+    name: flexran-du
+  register: flexran_pod
+  retries: 60
+  delay: 5
+  until:
+    - "flexran_pod.resources|length >=1"
+    - "'status' in flexran_pod.resources[0]"
+    - "'phase' in flexran_pod.resources[0].status"
+    - "flexran_pod.resources[0].status.phase == 'Running'"
+
+
