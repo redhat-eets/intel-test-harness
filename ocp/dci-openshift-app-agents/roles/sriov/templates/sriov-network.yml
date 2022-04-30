@@ -10,7 +10,6 @@ spec:
   vlan: 10
   spoofChk: "off"
   trust: "on"
-  networkNamespace: "{{flexran_du_ns}}"
 ---
 apiVersion: sriovnetwork.openshift.io/v1
 kind: SriovNetwork
@@ -24,4 +23,3 @@ spec:
   vlan: 20
   spoofChk: "off"
   trust: "on"
-  networkNamespace: "{{flexran_du_ns}}"
