@@ -32,5 +32,5 @@
     - "csv.resources[0].status.phase == 'Succeeded'"
 
 - name: "Wait for endpoints to become available"
-    pause:
-      seconds: 60
+  pause:
+    seconds: 60
