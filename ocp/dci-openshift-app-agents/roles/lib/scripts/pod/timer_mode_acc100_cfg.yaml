@@ -9,27 +9,30 @@ Threads:
     phycfg_timer:
       systemThread:
         pri: 0
-      FpgaDriverCpuInfo:
-        pri: 0
-      FrontHaulCpuInfo:
-        pri: 0
     testmac_cfg:
       systemThread:
         pri: 0
       runThread:
-        pri: 4
+        pri: 89
       urllcThread:
-        pri: 5
+        pri: 90
   2:
     phycfg_timer:
       timerThread:
-        pri: 6
+        pri: 96
       radioDpdkMaster:
-        pri: 9
+        pri: 99
   3:
     testmac_cfg:
       wlsRxThread:
-        pri: 5
+        pri: 90
+  4:
+    phycfg_timer:
+      FrontHaulCpuInfo:
+        pri: 96
+      FpgaDriverCpuInfo:
+        pri: 96
+
 
 Dpdk_cfgs:
   1:
@@ -44,8 +47,8 @@ Api_cfgs:
 
 Arch_dir: cascade_lake-sp
 
-Test_dirs:
-  - /opt/flexran/tests/nr5g/fd
+#Test_dirs:
+#  - /opt/flexran/tests/nr5g/fd
 
 #Tests:
 #  - clxsp_mu0_10mhz_4x4_hton.cfg
