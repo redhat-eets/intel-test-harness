@@ -33,5 +33,5 @@
         additionalTrustedCA:
           name: registry-cas
 
-- name: wait for 60 second to get cert effective
-  pause: seconds=60
+- name: wait for 120 second to get cert effective
+  pause: seconds=120
