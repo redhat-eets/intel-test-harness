@@ -12,6 +12,7 @@ metadata:
   namespace: vran-acceleration-operators
   targetNamespaces:
     - vran-acceleration-operators
+{% if fec_use_subscription %}
 ---
 apiVersion: operators.coreos.com/v1alpha1
 kind: Subscription
@@ -23,3 +24,27 @@ spec:
   name: sriov-fec
   source: certified-operators
   sourceNamespace: openshift-marketplace
+{% else %}
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+  name: intel-operators
+  namespace: openshift-marketplace
+spec:
+  sourceType: grpc
+  image: {{fec_index_url}}
+  publisher: Intel
+  displayName: Intel operators(Local)
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: sriov-fec-subscription
+  namespace: vran-acceleration-operators
+spec:
+  channel: stable
+  name: sriov-fec
+  source: intel-operators
+  sourceNamespace: openshift-marketplace
+{% endif %}
