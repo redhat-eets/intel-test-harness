@@ -1,0 +1,12 @@
+---
+- name: hello test
+  command: "./pod/pod_exec_updates.py -p flexran-du -d /opt/flexran/auto -c ./pod/timer_mode_acc100_cfg.yaml -f ./pod/autotest.py -f ./pod/cpu.py  -f ./pod/pod_exec_updates.py -f ./pod/process_testfile.py -f ./pod/read_yaml_write_xml.py -f ./pod/timer_mode_acc100_cfg.yaml -namespace {{ flexran_du_ns }} -timeout 60"
+  #script:
+    #chdir: "{{ role_path }}/../lib/scripts/" 
+    #cmd: "./pod/pod_exec_updates.py -p flexran-du -d /opt/flexran/auto -c ./pod/timer_mode_acc100_cfg.yaml -f ./pod/autotest.py -f ./pod/cpu.py  -f ./pod/pod_exec_updates.py -f ./pod/process_testfile.py -f ./pod/read_yaml_write_xml.py -f ./pod/timer_mode_acc100_cfg.yaml -namespace {{ flexran_du_ns }} -timeout 60"
+  args:
+    chdir: "{{ role_path }}/../lib/scripts/" 
+    #executable: python3
+    #environment:
+    #- PYTHONPATH: "{{ role_path }}/../lib/scripts"
+

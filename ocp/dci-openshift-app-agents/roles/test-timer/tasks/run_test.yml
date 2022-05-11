@@ -1,0 +1,98 @@
+- name: delete existing FlexRAN pod
+  k8s:
+    state: absent
+    kind: Pod
+    namespace: "{{flexran_du_ns}}"
+    name: flexran-du
+    api_version: v1
+
+- name: make sure FlexRAN is gone
+  k8s_info:
+    api: v1
+    namespace: "{{flexran_du_ns}}"
+    kind: Pod
+    name: flexran-du
+  register: flexran_pod
+  retries: 60
+  delay: 5
+  until:
+    - "flexran_pod.resources|length == 0 "
+
+- name: create FlexRAN pod
+  k8s:
+    state: present
+    definition: "{{ lookup('template', 'pod_flexran_timer.yml') }}"
+
+- name: make sure FlexRAN pod up
+  k8s_info:
+    api: v1
+    namespace: "{{flexran_du_ns}}"
+    kind: Pod
+    name: flexran-du
+  register: flexran_pod
+  retries: 60
+  delay: 5
+  until:
+    - "flexran_pod.resources|length >=1"
+    - "'status' in flexran_pod.resources[0]"
+    - "'phase' in flexran_pod.resources[0].status"
+    - "flexran_pod.resources[0].status.phase == 'Running'"
+
+- name: yum install extra packages in pod
+  kubernetes.core.k8s_exec:
+    namespace: "{{flexran_du_ns}}"
+    pod: flexran-du
+    command: yum install -y "{{pod_extra_pkg}}"
+  loop: "{{ pod_extra_pkgs }}"
+  loop_control:
+    loop_var: pod_extra_pkg
+  when: pod_extra_pkgs is defined and pod_extra_pkgs|length >= 1
+   
+- name: copy files into pods
+  kubernetes.core.k8s_cp:
+    namespace: "{{flexran_du_ns}}"
+    pod: flexran-du
+    remote_path: /opt/flexran/auto
+    local_path: "{{item}}"
+    #no_preserve: True
+  loop:
+    - "{{test_run_dir}}/pod/autotest.py"
+    - "{{test_run_dir}}/pod/cpu.py"
+    - "{{test_run_dir}}/pod/process_testfile.py"
+    - "{{test_run_dir}}/pod/read_yaml_write_xml.py"
+    - "{{test_run_dir}}/pod/timer_mode_acc100_cfg.yaml"
+
+      #- meta: end_play
+
+- name: Logging timer mode test
+  debug:
+    msg: "timercfg:{{ timercfg }}"
+
+# NOTE: GET RID OF HARD CODED PATHS
+- name: execute timer mode test
+  shell:
+    cmd: pytest -s --verbose --junit-xml "{{ test_run_dir }}/report_temp.xml" --pod flexran-du --cfg ./pod/timer_mode_acc100_cfg.yaml --namespace {{ flexran_du_ns }} --test {{ timercfg }} --timeout 300 test_flexran.py -o junit_suite_name={{ timercfg }}
+    #register: results
+    #cmd: pytest -s --pod flexran-du --dest /opt/flexran/auto --cfg ../../lib/scripts/pod/timer_mode_acc100_cfg.yaml --file ../../lib/scripts/pod/autotest.py --file ../../lib/scripts/pod/cpu.py --file ../../lib/scripts/pod/process_testfile.py --file ../../lib/scripts/pod/read_yaml_write_xml.py --file ../../lib/scripts/pod/timer_mode_acc100_cfg.yaml --namespace {{ flexran_du_ns }} --test {{ timercfg }} --timeout 120 test_flexran.py 
+    chdir: "{{ test_run_dir }}" #/root/intel-test-harness/ocp/dci-openshift-app-agents/roles/test-flexran/tests #/opt/ru_scripts
+  ignore_errors: yes
+  register: results
+
+- name: Find the result directory from results
+  set_fact:
+    results_dir: "{{results.stdout | regex_search('Result directory: (.*)', '\\1') | first }}"
+
+#- name: Logging results dir
+# debug:
+#   msg: "results_dir:{{ results_dir }}"
+
+- name: Add the results directory to the report xml for reference
+  xml:
+    file: "{{ test_run_dir }}/report_temp.xml"
+    xpath: /testsuites
+    add_children:
+      - results_directory: "{{ results_dir }}"
+
+- name: Concatenate temporary report file to final report file
+  shell:
+    cmd: "echo \"\" >> {{ test_run_dir }}/report_timer.xml; cat {{ test_run_dir }}/report_temp.xml >> {{ test_run_dir }}/report_timer.xml"

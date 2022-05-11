@@ -1,0 +1,29 @@
+- name: Create {{test_run_dir}} if not exists
+  file:
+    path: "{{test_run_dir}}"
+    state: directory
+    mode: 0755
+  become: yes
+
+- name: Copy scripts to {{test_run_dir}}
+  copy:
+    src: "{{role_path}}/../lib/scripts/"
+    dest: "{{test_run_dir}}" 
+    mode: preserve
+  become: yes
+
+- name: Delete existing pytest result file
+  file:
+    path: "{{ test_run_dir }}/report_timer.xml"
+    state: absent
+
+- name: Delete existing pytest temp result file
+  file:
+    path: "{{ test_run_dir }}/report_temp.xml"
+    state: absent
+
+- name: loop over timer mode test configs
+  include_tasks: run_test.yml
+  loop: "{{ timercfgs }}"
+  loop_control:
+    loop_var: timercfg

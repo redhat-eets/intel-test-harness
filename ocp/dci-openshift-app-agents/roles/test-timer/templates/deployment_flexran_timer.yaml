@@ -1,0 +1,77 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flexran-du
+  namespace: default
+  labels:
+    flexran: ""
+spec:
+   selector:
+     matchLabels:
+       flexran: ""
+   replicas: 1
+   strategy:
+     type: Recreate
+   template:
+     metadata:
+       labels:
+         flexran: ""
+     spec:
+       terminationGracePeriodSeconds: 20
+       #runtimeClassName: cnv-sriov-profile
+       nodeSelector:
+         node-role.kubernetes.io/worker-cnf: ""
+       containers:
+         - name: flexran-du
+           image: {{ansible_default_ipv4.address}}:5000/flexran:{{flexran_version}}
+           imagePullPolicy: IfNotPresent
+           command:
+             - sleep
+             - infinity
+           securityContext:
+             privileged: true
+           volumeMounts:
+             - name: hugepage
+               mountPath: /dev/hugepages
+               readOnly: false
+             - name: sys
+               mountPath: /sys
+               readOnly: false
+             - name: varrun
+               mountPath: /var/run/dpdk
+             - name: dev
+               mountPath: /dev
+           resources:
+             requests:
+               hugepages-1Gi: 16Gi
+               memory: 32Gi
+               intel.com/intel_fec_acc100: 1
+               cpu: "32"
+             limits:
+               hugepages-1Gi: 16Gi
+               memory: 32Gi
+               intel.com/intel_fec_acc100: 1              
+               cpu: "32"
+       volumes:
+         - name: hugepage
+           emptyDir:
+             medium: HugePages
+         - name: sys
+           hostPath:
+             path: "/sys"
+         - name: varrun
+           emptyDir: {}
+         - name: dev
+           hostPath:
+             path: /dev
+       tolerations:
+         - key: "node.kubernetes.io/unreachable"
+           operator: "Exists"
+           effect: "NoExecute"
+         - key: "node.kubernetes.io/not-ready"
+           operator: "Exists"
+           effect: "NoExecute"
+         - key: "node.kubernetes.io/unschedulable"
+           operator: "Exists"
+           effect: "NoExecute"
