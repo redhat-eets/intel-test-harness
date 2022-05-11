@@ -1,0 +1,47 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: flexran
+spec:
+  restartPolicy: Never
+  containers:
+  - name: flexran
+    image: 10.16.231.128:5000/flexran:v21.03
+    imagePullPolicy: Always
+    env:
+    - name: rcuc
+      value: "11"
+    - name: ksoftirqd
+      value: "11"
+    command:
+      - sleep
+      - "36000"
+    securityContext:
+      privileged: true
+    volumeMounts:
+    - mountPath: /dev/hugepages
+      name: hugepage
+    - mountPath: /sys
+      name: sys
+    - name: varrun
+      mountPath: /var/run/dpdk
+    resources:
+      limits:
+        hugepages-1Gi: 16Gi
+        memory: 16Gi
+        cpu: 32
+      requests:
+        hugepages-1Gi: 16Gi
+        memory: 16Gi
+        cpu: 32
+  volumes:
+  - name: hugepage
+    emptyDir:
+      medium: HugePages
+  - name: sys
+    hostPath:
+      path: /sys
+  - name: varrun
+    emptyDir: {}
+  nodeSelector:
+    node-role.kubernetes.io/worker-cnf: ""
