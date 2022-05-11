@@ -10,6 +10,7 @@ spec:
   vlan: 10
   spoofChk: "off"
   trust: "on"
+  networkNamespace: default
 ---
 apiVersion: sriovnetwork.openshift.io/v1
 kind: SriovNetwork
@@ -23,3 +24,5 @@ spec:
   vlan: 20
   spoofChk: "off"
   trust: "on"
+  networkNamespace: default
+
