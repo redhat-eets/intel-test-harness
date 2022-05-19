@@ -32,8 +32,9 @@
   with_items: "{{ groups['baremetal_workers'] }}"
 
 - name: Log all_cpus
-  debug: 
-   msg: "du_sriov_int_pci: {{du_sriov_int_pci.results[0].stdout}}"
+  debug:
+    msg: "du_sriov_int_pci: {{du_sriov_int_pci.results[0].stdout}}"
+  when: debug is defined and debug|int == 1
 
 - name: Apply the SRIOV NIC Policy config
   k8s:

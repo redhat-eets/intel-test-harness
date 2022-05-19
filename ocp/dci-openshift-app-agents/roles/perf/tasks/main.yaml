@@ -20,8 +20,6 @@
     definition: "{{ lookup('template', 'sub-perf.yml') }}"
   register: sub_version
 
-  #- meta: end_play
-
 - set_fact:
     namespace: openshift-performance-addon
 
@@ -48,8 +46,9 @@
   with_items: "{{ groups['baremetal_workers'] }}"
 
 - name: Log all_cpus
-  debug: 
+  debug:
     msg: "all_cpus: {{ all_cpus.results[0].stdout}}"
+  when: debug is defined and debug|int == 1
 
 - name: Execute reserved CPU command on baremetal worker over SSH
   shell: "{{ role_path }}/../lib/scripts/exec_over_ssh.sh {{ hostvars[item].hostname }} 'cat /sys/bus/cpu/devices/cpu0/topology/thread_siblings_list'"
@@ -57,8 +56,9 @@
   with_items: "{{ groups['baremetal_workers'] }}"
 
 - name: Log du_reserved_cpus
-  debug: 
+  debug:
     msg: "du_reserved_cpus: {{ du_reserved_cpus.results[0].stdout }}"
+  when: debug is defined and debug|int == 1
 
   #- name: Execute all CPU command on baremetal worker
   #  community.kubernetes.k8s_exec:
@@ -79,6 +79,7 @@
 - name: Log cpu command
   debug:
     msg: "{{ role_path }}/tasks/cpu_cmd.py cpuset-substract {{ all_cpus.results[0].stdout }} {{ du_reserved_cpus.results[0].stdout }}"
+  when: debug is defined and debug|int == 1
 
 - name: Run the cpu_cmd.py to get DU Isolated CPUs
   script: "{{ role_path }}/../lib/scripts/cpu_cmd.py cpuset-substract {{ all_cpus.results[0].stdout }} {{ du_reserved_cpus.results[0].stdout }}"
@@ -91,6 +92,7 @@
 - name: Log du_isolated_cpus
   debug:
     msg: "du_isolated_cpus: {{ du_isolated_cpus.stdout }}"
+  when: debug is defined and debug|int == 1
 
 - name: Create the Machine Config Pool
   k8s:

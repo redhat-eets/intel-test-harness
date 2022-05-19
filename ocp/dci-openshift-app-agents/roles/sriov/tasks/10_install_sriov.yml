@@ -45,9 +45,10 @@
   #  state: present
   #  definition: "{{ lookup('template', 'templates/sub-sriov.yml') }}"
 
-# - name: Log sriov_manifest
-#   debug: 
-#     msg: "{{ sriov_manifest.resources[0].status.defaultChannel }}"
+- name: Log sriov_manifest
+  debug:
+    msg: "{{ sriov_manifest.resources[0].status.defaultChannel }}"
+  when: debug is defined and debug|int == 1
 
 - name: Subscribe to SRIOV Network Operator
   k8s:
@@ -113,9 +114,9 @@
   register: du_sriov_int_pci
   with_items: "{{ groups['baremetal_workers'] }}"
 
-- name: Log all_cpus
-  debug: 
-   msg: "du_sriov_int_pci: {{du_sriov_int_pci.results[0].stdout}}"
+  #- name: Log all_cpus
+  #debug: 
+  # msg: "du_sriov_int_pci: {{du_sriov_int_pci.results[0].stdout}}"
 
   #- name: Execute all CPU command on baremetal worker
   #  community.kubernetes.k8s_exec:

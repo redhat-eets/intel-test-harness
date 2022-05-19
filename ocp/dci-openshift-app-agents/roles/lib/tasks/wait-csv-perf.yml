@@ -16,6 +16,7 @@
 - name: "debug"
   debug:
     msg: "csv: {{ csv }}"
+  when: debug is defined and debug|int == 1
 
 - name: "Wait for endpoints to become available"
   pause:
