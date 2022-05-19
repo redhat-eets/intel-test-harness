@@ -38,12 +38,12 @@ spec:
     resources:
       limits:
         hugepages-1Gi: 16Gi
-        memory: 32Gi
+        memory: 16Gi
         cpu: 32
         intel.com/intel_fec_acc100: '1'
       requests:
         hugepages-1Gi: 16Gi
-        memory: 32Gi
+        memory: 16Gi
         cpu: 32 
         intel.com/intel_fec_acc100: '1'
   volumes:

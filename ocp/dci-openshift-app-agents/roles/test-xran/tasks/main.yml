@@ -1,92 +1,96 @@
-- name: install tmux
-  yum:
-    name: tmux
+---
+- name: start ru on trafficgen server
+  include: ru.yml
+  delegate_to: trafficgen
+  when: run_ru is defined and run_ru
+
+- name: create namespace {{flexran_du_ns}}
+  k8s:
+    definition:
+      api_version: v1
+      kind: Namespace
+      metadata:
+        name: "{{flexran_du_ns}}" 
+
+- name: delete existing FlexRAN pod
+  k8s:
+    state: absent
+    kind: Pod
+    namespace: "{{flexran_du_ns}}"
+    name: flexran-du
+    api_version: v1
+
+- name: make sure FlexRAN is gone
+  k8s_info:
+    api: v1 
+    namespace: "{{flexran_du_ns}}"
+    kind: Pod
+    name: flexran-du
+  register: flexran_pod
+  retries: 60
+  delay: 5
+  until:
+    - "flexran_pod.resources|length == 0 "
+
+- name: create FlexRAN pod
+  k8s:
     state: present
+    definition: "{{ lookup('template', 'pod_flexran_xran.yml') }}"
 
-- name: install linuxptp 
-  yum:
-    name: linuxptp
-    state: latest
+- name: make sure FlexRAN pod up
+  k8s_info:
+    api: v1 
+    namespace: "{{flexran_du_ns}}"
+    kind: Pod
+    name: flexran-du
+  register: flexran_pod
+  retries: 60
+  delay: 5
+  until:
+    - "flexran_pod.resources|length >=1"
+    - "'status' in flexran_pod.resources[0]"
+    - "'phase' in flexran_pod.resources[0].status"
+    - "flexran_pod.resources[0].status.phase == 'Running'"
 
-- name: replace priority setting in ptp4l.conf
-  lineinfile:
-    path: /etc/ptp4l.conf
-    regexp: '^priority1(\s+).*'
-    line: "priority1\t\t127"
+- name: copy files into pods
+  kubernetes.core.k8s_cp:
+    namespace: "{{flexran_du_ns}}"
+    pod: flexran-du
+    remote_path: /opt/flexran/auto
+    local_path: "{{item}}"
+    #no_preserve: True
+  loop:
+    - "{{test_run_dir}}/pod/autotest.py"
+    - "{{test_run_dir}}/pod/cpu.py"
+    - "{{test_run_dir}}/pod/process_testfile.py"
+    - "{{test_run_dir}}/pod/read_yaml_write_xml.py"
+    - "{{test_run_dir}}/pod/xran_mode_cfg.yaml"
 
-- name: replace OPTIONS in /etc/sysconfig/phc2sys
-  lineinfile:
-    path: /etc/sysconfig/phc2sys
-    regexp: '^OPTIONS=.*'
-    line: OPTIONS="{{'-a -r -r -m' if ru_is_gm is defined and ru_is_gm else '-a -r -m' }}"
-
-- name: replace OPTIONS in /etc/sysconfig/ptp4l
-  lineinfile:
-    path: /etc/sysconfig/ptp4l
-    regexp: '^OPTIONS=.*'
-    line: OPTIONS="-f /etc/ptp4l.conf -i {{ru_ptp_int}} -2 -m"
-
-- name: stop chronyd
-  systemd:
-    name: chronyd
-    state: stopped
-
-- name: Enable ptp4l.service
-  systemd:
-    name: ptp4l.service
-    enabled: yes
-  become: yes
-
-- name: Start ptp4l.service
-  systemd:
-    name: ptp4l.service
-    state: restarted
-  become: yes
-
-- name: Enable phc2sys.service
-  systemd:
-    name: phc2sys.service
-    enabled: yes
-  become: yes
-
-- name: Start phc2sys.service
-  systemd:
-    name: phc2sys.service
-    state: restarted
-  become: yes
-
-- name: create /opt/ru_scripts
-  file:
-    path: "/opt/ru_scripts"
-    state: directory
-    mode: 0755
-  become: yes
-
-- name: copy cpu_cmd.py
-  copy:
-    src: "{{role_path}}/../lib/scripts/"
-    dest: /opt/ru_scripts/
-  become: yes
-
-
-- name: create /opt/ru_scripts/ru_sriov.sh
+- name: create {{test_run_dir}}/xran_mode_cfg.yaml 
   template:
-    src: ru_sriov.sh
-    dest: /opt/ru_scripts/ru_sriov.sh
-    owner: root
-    group: root
-    mode: 0755
+    src: xran_mode_cfg.yaml 
+    dest: "{{test_run_dir}}/xran_mode_cfg.yaml"
   become: yes
 
-- name: execute /opt/ru_scripts/ru_sriov.sh
-  shell: /opt/ru_scripts/ru_sriov.sh
-  register: result
+- name: execute xran test
+  shell:
+    cmd: pytest -s --verbose --junit-xml "{{ test_run_dir }}/report_temp.xml" --pod flexran-du --cfg xran_mode_cfg.yaml --xran --phystart --namespace {{ flexran_du_ns }} --test {{orancfg}} --timeout 300 test_flexran.py -o junit_suite_name={{orancfg}}
+    chdir: "{{ test_run_dir }}"
+  ignore_errors: yes
+  register: results
 
-- set_fact:
-    oru_sriov_str: "{{ result.stdout }}"
+- name: Find the result directory from results
+  set_fact:
+    results_dir: "{{results.stdout | regex_search('Result directory: (.*)', '\\1') | first }}"
 
-- name: loop over oran test configs
-  include_tasks: oran.yml
-  loop: "{{ orancfgs }}"
-  loop_control:
-    loop_var: orancfg
+- name: Add the results directory to the report xml for reference
+  xml:
+    file: "{{ test_run_dir }}/report_temp.xml"
+    xpath: /testsuites
+    add_children:
+      - results_directory: "{{ results_dir }}"
+
+- name: Concatenate temporary report file to final report file
+  shell:
+    cmd: "echo \"\" >> {{ test_run_dir }}/report_xran.xml; cat {{ test_run_dir }}/report_temp.xml >> {{ test_run_dir }}/report_xran.xml"
+

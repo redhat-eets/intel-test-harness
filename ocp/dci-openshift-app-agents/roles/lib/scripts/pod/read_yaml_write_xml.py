@@ -373,7 +373,12 @@ class CfgData:
                         else:
                             xml_pci_1.text = dpdk.pci_bus_ru0vf1_val
                             #print("text_1", xml_pci_1.text)
-                            
+                        xml_vlan = root.find("c_plane_vlan_tag")
+                        if xml_vlan is not None:
+                            xml_vlan.text = "10"
+                        xml_vlan = root.find("u_plane_vlan_tag")
+                        if xml_vlan is not None:
+                            xml_vlan.text = "20"
                     else:
                         root_dpdks = root.find('DPDK')
                         xml_dpdk_mem_size = root_dpdks.find(dpdk.mem_size_str)
