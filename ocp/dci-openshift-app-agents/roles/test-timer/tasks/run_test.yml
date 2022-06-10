@@ -68,10 +68,16 @@
   debug:
     msg: "timercfg:{{ timercfg }}"
 
+- name: create {{test_run_dir}}/timer_mode_acc100_cfg.yaml
+  template:
+    src: timer_mode_acc100_cfg.yaml 
+    dest: "{{test_run_dir}}/timer_mode_acc100_cfg.yaml"
+  become: yes
+
 # NOTE: GET RID OF HARD CODED PATHS
 - name: execute timer mode test
   shell:
-    cmd: pytest -s --verbose --junit-xml "{{ test_run_dir }}/report_temp.xml" --pod flexran-du --cfg ./pod/timer_mode_acc100_cfg.yaml --namespace {{ flexran_du_ns }} --test {{ timercfg }} --timeout 300 test_flexran.py -o junit_suite_name={{ timercfg }}
+    cmd: pytest -s --verbose --junit-xml "{{ test_run_dir }}/report_temp.xml" --pod flexran-du --cfg timer_mode_acc100_cfg.yaml --namespace {{ flexran_du_ns }} --test {{ timercfg }} --timeout 300 test_flexran.py -o junit_suite_name={{ timercfg }}
     #register: results
     #cmd: pytest -s --pod flexran-du --dest /opt/flexran/auto --cfg ../../lib/scripts/pod/timer_mode_acc100_cfg.yaml --file ../../lib/scripts/pod/autotest.py --file ../../lib/scripts/pod/cpu.py --file ../../lib/scripts/pod/process_testfile.py --file ../../lib/scripts/pod/read_yaml_write_xml.py --file ../../lib/scripts/pod/timer_mode_acc100_cfg.yaml --namespace {{ flexran_du_ns }} --test {{ timercfg }} --timeout 120 test_flexran.py 
     chdir: "{{ test_run_dir }}" #/root/intel-test-harness/ocp/dci-openshift-app-agents/roles/test-flexran/tests #/opt/ru_scripts
@@ -82,6 +88,10 @@
   set_fact:
     results_dir: "{{results.stdout | regex_search('Result directory: (.*)', '\\1') | first }}"
 
+- name: Find the result summary from testmac results
+  set_fact:
+    results_summary: "{{results.stdout | regex_search('Testmac Summary: (.*)', '\\1') | first }}"
+
 #- name: Logging results dir
 # debug:
 #   msg: "results_dir:{{ results_dir }}"
@@ -89,10 +99,50 @@
 - name: Add the results directory to the report xml for reference
   xml:
     file: "{{ test_run_dir }}/report_temp.xml"
-    xpath: /testsuites
+    xpath: /testsuites/testsuite
     add_children:
       - results_directory: "{{ results_dir }}"
 
-- name: Concatenate temporary report file to final report file
+- name: Add the testmac results summary to the report xml for reference
+  xml:
+    file: "{{ test_run_dir }}/report_temp.xml"
+    xpath: /testsuites/testsuite
+    add_children:
+      - results_summary: "{{ results_summary }}"
+
+- name: Execute the testsuite_parser to add report_temp to report_timer
   shell:
-    cmd: "echo \"\" >> {{ test_run_dir }}/report_timer.xml; cat {{ test_run_dir }}/report_temp.xml >> {{ test_run_dir }}/report_timer.xml"
+    cmd: ./testsuite_parser.py -t "{{ test_run_dir }}/report_temp.xml" -a "{{ test_run_dir }}/report_timer.xml"
+    chdir: "{{ test_run_dir }}"
+
+#- name: Copy the testsuite from report_temp
+#  xml:
+#    file: "{{ test_run_dir }}/report_temp.xml"
+#    xpath: /testsuites/testsuite
+#    content: text
+#  register: xml_testsuite
+
+#- name: Log the xml_testsuite
+#  debug:
+#    msg: "xml_testsuite: {{ xml_testsuite.matches }}"
+
+#- name: Add the loaded testsuite to report_timer
+#  xml:
+#    file: "{{ test_run_dir }}/report_timer.xml"
+#    xpath: /testsuites
+#    input_type: xml
+#    add_children:
+#      - testsuite: "{{ xml_testsuite }}"
+
+#- name: Delete xml header at start of report_temp.xml
+#  shell:
+#    cmd: "sed -i '1d' {{ test_run_dir }}/report_temp.xml"
+
+#- name: Delete empty lines from report_timer.xml
+#  shell:
+#    cmd: "sed -i '/^$/d' {{ test_run_dir }}/report_timer.xml"
+
+#- name: Concatenate temporary report file to final report file
+#  shell:
+#    cmd: "echo \"\" >> {{ test_run_dir }}/report_timer.xml; cat {{ test_run_dir }}/report_temp.xml >> {{ test_run_dir }}/report_timer.xml"
+

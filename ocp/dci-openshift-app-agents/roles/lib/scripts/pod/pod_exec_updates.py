@@ -310,10 +310,7 @@ def exec_updates(name, api_instance, destination, testmac,
                  l1, test_list, cfg, no_sibling, architecture_dir, xran,
                  phystart, pod_namespace, test_dir_list):
 
-    # Install python modules in pod
     commands = [
-        'pip3 install lxml',
-        'pip3 install dataclasses',
         "cd " + destination,
     ]
 
@@ -409,7 +406,6 @@ def exec_tests(name, api_instance, pod_name, testmac, l1, testfile, xran, pod_na
                   _preload_content=False)
 
     commands = [
-        "source /opt/flexran/auto/env.src",
         "cd " + l1,
     ]
     if xran:
@@ -474,7 +470,6 @@ def exec_tests(name, api_instance, pod_name, testmac, l1, testfile, xran, pod_na
                   stdout=True, tty=True,
                   _preload_content=False)
     commands = [
-        "source /opt/flexran/auto/env.src",
         "cd " + testmac,
         "./l2.sh --testfile=" + testfile,
     ]

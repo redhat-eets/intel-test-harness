@@ -22,6 +22,13 @@
     path: "{{ test_run_dir }}/report_temp.xml"
     state: absent
 
+- name: Create pytest result file
+  copy:
+    dest: "{{ test_run_dir }}/report_timer.xml"
+    content: |
+      <?xml version='1.0' encoding='UTF-8'?>
+      <testsuites></testsuites>
+
 - name: loop over timer mode test configs
   include_tasks: run_test.yml
   loop: "{{ timercfgs }}"

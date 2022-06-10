@@ -547,14 +547,15 @@ class Tests:
                 break
             elif seg_fault or timed_out or core_os_terminal:
                 if seg_fault:
-                    print('Segmentation Fault in Testmac!\n')
+                    print('Testmac Summary: Segmentation Fault in Testmac!\n')
                 elif timed_out:
-                    print('Testmac timed out without update!\n')
+                    print('Testmac Summary: Testmac timed out without update!\n')
                 elif core_os_terminal:
-                    print('Testmac exited without finishing!\n')
+                    print('Testmac Summary: Testmac exited without finishing!\n')
 
                 result_dir = write_to_files(testfile, result, xran, l1, pod, l1_output, testmac_output, pod_namespace)
                 # The test fails
+                #print("Testmac Summary: " + result[0].rstrip())
                 return False
                 #sys.exit(1)
 
@@ -563,6 +564,7 @@ class Tests:
         time.sleep(20)
         resp.close()
         testmac_resp.close()
+        print("Testmac Summary: " + result[0].rstrip())
         if not passed:
             print("Not all tests passed")
             return False
