@@ -2,13 +2,21 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: flexran-du
-  namespace: default
+  namespace: "{{flexran_du_ns}}"
 spec:
   restartPolicy: Never
   containers:
     - name: flexran-du
       image: {{ansible_default_ipv4.address}}:5000/flexran:{{flexran_version}}
       imagePullPolicy: Always
+{% if secure_boot %}
+      env:
+      - name: VFIO_TOKEN
+        valueFrom:
+          secretKeyRef:
+            name: vfio-token
+            key: VFIO_TOKEN
+{% endif %}
       command:
         - sleep
         - infinity

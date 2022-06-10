@@ -402,6 +402,11 @@ class CfgData:
                             #print("dpdk device value: ", dpdk.base_band_device_val)
                             xml_dpdk_device.text = dpdk.base_band_device_val
 
+                        xml_vfio_token = root_dpdks.find("dpdkVfioVfToken")
+                        vfio_token = get_env_variable("VFIO_TOKEN")
+                        if xml_vfio_token is not None and vfio_token is not None:
+                           xml_vfio_token.text = vfio_token
+
                 xml_tree.write(cls.dict_cfgfile_paths[cfg_file_name] + cfg_file_name)
 
         except Exception as e:

@@ -10,7 +10,11 @@ spec:
   acceleratorSelector:
     pciAddress: "{{du_fec_pci}}" 
   physicalFunction:
+{% if secure_boot %}
+    pfDriver: vfio-pci
+{% else %}
     pfDriver: pci-pf-stub
+{% endif %}
     vfDriver: vfio-pci
     vfAmount: 16 
     bbDevConfig:
