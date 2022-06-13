@@ -13,7 +13,7 @@
  
 - import_tasks: "{{ role_path }}/../lib/tasks/get-channel.yml"
 
-- name: Create sriov subscription using template
+- name: Create fec subscription using template
   k8s:
     state: present
     definition: "{{ lookup('template', 'sub-fec.yml') }}"

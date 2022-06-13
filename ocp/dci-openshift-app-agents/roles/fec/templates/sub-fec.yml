@@ -10,8 +10,9 @@ kind: OperatorGroup
 metadata:
   name: vran-operators 
   namespace: vran-acceleration-operators
+spec:
   targetNamespaces:
-    - vran-acceleration-operators
+  - vran-acceleration-operators
 {% if fec_use_subscription %}
 ---
 apiVersion: operators.coreos.com/v1alpha1

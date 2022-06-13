@@ -1,5 +1,0 @@
----
-
-#- include_tasks: pre-run.yml
-- include_tasks: 10_install_perf.yml
-
