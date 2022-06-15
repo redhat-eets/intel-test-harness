@@ -3,23 +3,23 @@ kind: Namespace
 metadata:
   labels:
     openshift.io/run-level: "1" 
-  name: vran-acceleration-operators
+  name: "{{flexran_du_ns}}"
 ---
 apiVersion: operators.coreos.com/v1
 kind: OperatorGroup
 metadata:
   name: vran-operators 
-  namespace: vran-acceleration-operators
+  namespace: "{{flexran_du_ns}}"
 spec:
   targetNamespaces:
-  - vran-acceleration-operators
+  - "{{flexran_du_ns}}"
 {% if fec_use_subscription %}
 ---
 apiVersion: operators.coreos.com/v1alpha1
 kind: Subscription
 metadata:
   name: sriov-fec-subscription
-  namespace: vran-acceleration-operators
+  namespace: "{{flexran_du_ns}}"
 spec:
   channel: stable
   name: sriov-fec
@@ -42,7 +42,7 @@ apiVersion: operators.coreos.com/v1alpha1
 kind: Subscription
 metadata:
   name: sriov-fec-subscription
-  namespace: vran-acceleration-operators
+  namespace: "{{flexran_du_ns}}"
 spec:
   channel: stable
   name: sriov-fec

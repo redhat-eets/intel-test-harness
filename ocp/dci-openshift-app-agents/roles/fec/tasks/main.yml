@@ -19,7 +19,7 @@
     definition: "{{ lookup('template', 'sub-fec.yml') }}"
 
 - set_fact:
-    namespace: vran-acceleration-operators
+    namespace: "{{flexran_du_ns}}"
 
 - import_tasks: "{{ role_path }}/../lib/tasks/wait-csv.yml"
 
