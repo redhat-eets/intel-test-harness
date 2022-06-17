@@ -1,6 +1,0 @@
----
-- name: test ptp 
-  shell: |
-    set -x
-    python3 -m pytest --junit-xml hello.xml test_ptp.py 
-

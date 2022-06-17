@@ -1,1 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?><testsuites><testsuite errors="0" failures="0" hostname="flexran-ru" name="pytest" skipped="0" tests="1" time="0.015" timestamp="2022-04-08T09:33:11.307430"><testcase classname="test_hello" name="test_hello" time="0.001" /></testsuite></testsuites>
