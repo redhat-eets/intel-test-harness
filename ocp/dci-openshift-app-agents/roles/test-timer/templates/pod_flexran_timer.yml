@@ -7,7 +7,7 @@ spec:
   restartPolicy: Never
   containers:
     - name: flexran-du
-      image: {{ansible_default_ipv4.address}}:5000/flexran:{{flexran_version}}
+      image: {{ flexran_image | default(ansible_default_ipv4.address+':5000/flexran:'+flexran_version|string) }}
       imagePullPolicy: Always
 {% if secure_boot %}
       env:
@@ -55,4 +55,4 @@ spec:
       hostPath:
         path: /dev
   nodeSelector:
-    node-role.kubernetes.io/worker-cnf: ''
+    node-role.kubernetes.io/{{ node_role }}: ''

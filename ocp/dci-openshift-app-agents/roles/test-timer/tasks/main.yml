@@ -3,12 +3,13 @@
     path: "{{test_run_dir}}"
     state: directory
     mode: 0755
+    owner: "{{ ansible_user_id }}"
   become: yes
 
 - name: Copy scripts to {{test_run_dir}}
   copy:
     src: "{{role_path}}/../lib/scripts/"
-    dest: "{{test_run_dir}}" 
+    dest: "{{test_run_dir}}"
     mode: preserve
   become: yes
 
