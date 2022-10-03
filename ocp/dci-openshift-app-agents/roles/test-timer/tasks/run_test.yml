@@ -31,7 +31,7 @@
     name: flexran-du
   register: flexran_pod
   retries: 60
-  delay: 5
+  delay: 10
   until:
     - "flexran_pod.resources|length >=1"
     - "'status' in flexran_pod.resources[0]"
