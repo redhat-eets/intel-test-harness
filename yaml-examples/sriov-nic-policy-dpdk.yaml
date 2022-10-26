@@ -1,0 +1,20 @@
+---
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetworkNodePolicy
+metadata:
+  name: policy-dpdk 
+  namespace: openshift-sriov-network-operator
+spec:
+  deviceType: vfio-pci
+  #deviceType: netdevice
+  mtu: 9000
+  nicSelector:
+    rootDevices:
+    - "0000:65:00.0"
+    pfNames:
+    - "ens1f0#0-7" 
+  nodeSelector:
+    node-role.kubernetes.io/master: ""
+  numVfs: 16 
+  priority: 5
+  resourceName: dpdkdevice 

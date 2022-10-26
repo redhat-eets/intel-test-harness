@@ -1,0 +1,27 @@
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetwork
+metadata:
+  name: vf-dpdk-vlan10
+  namespace: openshift-sriov-network-operator
+spec:
+  ipam: ""
+  capabilities: '{ "mac": true }'
+  resourceName: dpdkdevice
+  vlan: 10
+  spoofChk: "off"
+  trust: "on" 
+  networkNamespace: default 
+---
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetwork
+metadata:
+  name: vf-net-vlan20
+  namespace: openshift-sriov-network-operator
+spec:
+  ipam: "" 
+  capabilities: '{ "mac": true }'
+  resourceName: netdevice
+  vlan: 20
+  spoofChk: "off"
+  trust: "on" 
+  networkNamespace: default 

@@ -1,0 +1,23 @@
+apiVersion: v1 
+kind: Pod 
+metadata:
+  name: sriov1
+  annotations:
+    k8s.v1.cni.cncf.io/networks: sriov-vlan10 
+spec:
+  restartPolicy: Never
+  containers:
+  - name: sriov1 
+    image: docker.io/busybox 
+    imagePullPolicy: IfNotPresent 
+    command:
+      - sleep
+      - "3600"
+    resources:
+      requests:
+        openshift.io/intelnics0: '1'
+      limits:
+        openshift.io/intelnics0: '1'
+    securityContext:
+          privileged: true
+

@@ -1,0 +1,23 @@
+apiVersion: v1 
+kind: Pod 
+metadata:
+  name: sriov1
+  annotations:
+    k8s.v1.cni.cncf.io/networks: vf-dpdk-vlan10,vf-net-vlan20
+spec:
+  restartPolicy: Never
+  containers:
+  - name: sriov1 
+    image: docker.io/busybox 
+    imagePullPolicy: IfNotPresent 
+    command:
+      - sleep
+      - "3600"
+    resources:
+      requests:
+        openshift.io/dpdkdevice: '1'
+      limits:
+        openshift.io/dpdkdevice: '1'
+    securityContext:
+          privileged: true
+
