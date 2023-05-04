@@ -9,7 +9,7 @@ spec:
     - name: flexran-du
       image: {{ flexran_image | default(ansible_default_ipv4.address+':5000/flexran:'+flexran_version|string) }}
       imagePullPolicy: Always
-{% if secure_boot %}
+{% if secure_boot_static_token %}
       env:
       - name: VFIO_TOKEN
         valueFrom:
